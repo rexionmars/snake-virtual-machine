@@ -29,9 +29,20 @@ typedef struct {
     Word operand;
 } Instruction;
 
-Vm vm ={0};
+Instruction instruction_push(Word operand)
+{
+    return (Instruction) {
+        .type = INSTRUCTION_PUSH,
+        .operand = operand,
+    };
+}
 
-Trap vm_execute_inst(Vm *vm, Instruction instruction)
+Instruction instruction_plus()
+{
+    return (Instruction) {.type = INSTRUCTION_PLUS};
+}
+
+Trap vm_execute_instruction(Vm *vm, Instruction instruction)
 {
     switch (instruction.type) {
         case INSTRUCTION_PUSH:
@@ -56,8 +67,23 @@ Trap vm_execute_inst(Vm *vm, Instruction instruction)
     return TRAP_OK;
 }
 
+void vm_dump(const Vm *vm)
+{
+    printf("Stack:\n");
+    if (vm -> stack_size > 0) {
+        for (size_t i = 0; i < vm -> stack_size; i++) {
+            printf("--> %ld\n", vm -> stack[i]);
+        }
+    }
+    else {
+        printf("--> [Empty]\n");
+    }
+}
+
+Vm vm ={0};
+
 int main()
 {
-    printf("Hello world!");
+    vm_dump(&vm);
     return 0;
 }
