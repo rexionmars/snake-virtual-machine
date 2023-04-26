@@ -72,11 +72,11 @@ void vm_dump(const Vm *vm)
     printf("Stack:\n");
     if (vm -> stack_size > 0) {
         for (size_t i = 0; i < vm -> stack_size; i++) {
-            printf("\033[0;33m-->\033[0m %ld\n", vm -> stack[i]);
+            printf("--> %ld\n", vm -> stack[i]);
         }
     }
     else {
-        printf("\033[0;31m-->\033[0m [Empty]\n");
+        printf("--> [Empty]\n");
     }
 }
 
