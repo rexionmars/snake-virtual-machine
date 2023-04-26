@@ -6,11 +6,27 @@
 #define VM_STACK_CAPACITY 1024
 
 typedef enum {
-    TRAP_OK = 0,
-    TRAP_STACK_OVERFLOW,
-    TRAP_STACK_UNDERFLOW,
-    TRAP_ILLEGAL_INSTRUCTION,
-} Trap;
+    ERROR_OK = 0,
+    ERROR_STACK_OVERFLOW,
+    ERROR_STACK_UNDERFLOW,
+    ERROR_ILLEGAL_INSTRUCTION,
+} Error;
+
+const char *error_as_cstr(Error error)
+{
+    switch (error) {
+        case ERROR_OK:
+            return "ERROR_OK";
+        case ERROR_STACK_OVERFLOW:
+            return "ERROR_STACK_OVERFLOW";
+        case ERROR_STACK_UNDERFLOW:
+            return "ERROR_STACK_UNDERFLOW";
+        case ERROR_ILLEGAL_INSTRUCTION:
+            return "ERROR_ILLEGAL_INSTRUCTION";
+        default:
+            assert(0 && "error_as_cstr --> Unreachable");
+    }
+}
 
 typedef int64_t Word;
 
@@ -29,32 +45,24 @@ typedef struct {
     Word operand;
 } Instruction;
 
-Instruction instruction_push(Word operand)
-{
-    return (Instruction) {
-        .type = INSTRUCTION_PUSH,
-        .operand = operand,
-    };
-}
+#define MAKE_INSTRUCTION_PUSH(value) ((Instruction) {.type = INSTRUCTION_PUSH, .operand = (value)})
+#define MAKE_INSTRUCTION_PLUS ((Instruction) {.type = INSTRUCTION_PLUS})
 
-Instruction instruction_plus()
-{
-    return (Instruction) {.type = INSTRUCTION_PLUS};
-}
 
-Trap vm_execute_instruction(Vm *vm, Instruction instruction)
+
+Error vm_execute_instruction(Vm *vm, Instruction instruction)
 {
     switch (instruction.type) {
         case INSTRUCTION_PUSH:
             if (vm -> stack_size >= VM_STACK_CAPACITY) {
-                return TRAP_STACK_OVERFLOW;
+                return ERROR_STACK_OVERFLOW;
             }
             vm -> stack[vm -> stack_size++] = instruction.operand;
             break;
 
         case INSTRUCTION_PLUS:
             if (vm -> stack_size < 2) {
-                return TRAP_STACK_UNDERFLOW;
+                return ERROR_STACK_UNDERFLOW;
             }
 
             vm -> stack[vm -> stack_size - 2] += vm -> stack[vm -> stack_size -1];
@@ -62,34 +70,47 @@ Trap vm_execute_instruction(Vm *vm, Instruction instruction)
             break;
 
         default:
-            return TRAP_ILLEGAL_INSTRUCTION;
+            return ERROR_ILLEGAL_INSTRUCTION;
     }
-    return TRAP_OK;
+    return ERROR_OK;
 }
 
-void vm_dump(const Vm *vm)
+void vm_dump(FILE *stream, const Vm *vm)
 {
-    printf("Stack:\n");
+    fprintf(stream, "Stack:\n");
     if (vm -> stack_size > 0) {
         for (size_t i = 0; i < vm -> stack_size; i++) {
-            printf("--> %ld\n", vm -> stack[i]);
+            fprintf(stream, "--> %ld\n", vm -> stack[i]);
         }
     }
     else {
-        printf("--> [Empty]\n");
+        fprintf(stream, "--> [Empty]\n");
     }
 }
 
+#define ARRAY_SIZE(xs) (sizeof(xs) / sizeof((xs)[0]))
+
 Vm vm ={0};
+Instruction program[] = {
+    MAKE_INSTRUCTION_PUSH(69),
+    MAKE_INSTRUCTION_PUSH(420),
+    MAKE_INSTRUCTION_PLUS,
+};
 
 int main()
 {
-    vm_dump(&vm);
-    vm_execute_instruction(&vm, instruction_push(69));
-    vm_dump(&vm);
-    vm_execute_instruction(&vm, instruction_push(420));
-    vm_dump(&vm);
-    vm_execute_instruction(&vm, instruction_plus());
-    vm_dump(&vm);
+    vm_dump(stdout, &vm);
+
+    for (size_t i = 0; i < ARRAY_SIZE(program); ++i) {
+        Error error = vm_execute_instruction(&vm, program[i]);
+
+        if (error != ERROR_OK) {
+            fprintf(stderr, "ERROR activated --> %s\n", error_as_cstr(error));
+            vm_dump(stderr, &vm);
+            exit(1);
+        }
+    }
+    vm_dump(stdout, &vm);
+
     return 0;
 }
