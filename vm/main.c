@@ -37,7 +37,10 @@ typedef struct {
 
 typedef enum {
     INSTRUCTION_PUSH,
-    INSTRUCTION_PLUS
+    INSTRUCTION_PLUS,
+    INSTRUCTION_MINUS,
+    INSTRUCTION_MULT,
+    INSTRUCTION_DIV,
 } Instruction_type;
 
 typedef struct {
@@ -45,8 +48,11 @@ typedef struct {
     Word operand;
 } Instruction;
 
-#define MAKE_INSTRUCTION_PUSH(value) ((Instruction) {.type = INSTRUCTION_PUSH, .operand = (value)})
-#define MAKE_INSTRUCTION_PLUS ((Instruction) {.type = INSTRUCTION_PLUS})
+#define MAKE_INSTRUCTION_PUSH(value) {.type = INSTRUCTION_PUSH, .operand = (value)}
+#define MAKE_INSTRUCTION_PLUS {.type = INSTRUCTION_PLUS}
+#define MAKE_INSTRUCTION_MINUS  {.type = INSTRUCTION_MINUS}
+#define MAKE_INSTRUCTION_MULT  {.type = INSTRUCTION_MULT}
+#define MAKE_INSTRUCTION_DIV  {.type = INSTRUCTION_DIV}
 
 
 
@@ -64,8 +70,31 @@ Error vm_execute_instruction(Vm *vm, Instruction instruction)
             if (vm -> stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
+            vm -> stack[vm -> stack_size - 2] += vm -> stack[vm -> stack_size - 1];
+            vm -> stack_size -= 1;
+            break;
 
-            vm -> stack[vm -> stack_size - 2] += vm -> stack[vm -> stack_size -1];
+        case INSTRUCTION_MINUS:
+            if (vm -> stack_size < 2) {
+                return ERROR_STACK_UNDERFLOW;
+            }
+            vm -> stack[vm -> stack_size - 2] -= vm -> stack[vm -> stack_size - 1];
+            vm -> stack_size -= 1;
+            break;
+
+        case INSTRUCTION_MULT:
+            if (vm -> stack_size < 2) {
+                return ERROR_STACK_UNDERFLOW;
+            }
+            vm -> stack[vm -> stack_size - 2] *= vm -> stack[vm -> stack_size - 1];
+            vm -> stack_size -= 1;
+            break;
+
+        case INSTRUCTION_DIV:
+            if (vm -> stack_size < 2) {
+                return ERROR_STACK_UNDERFLOW;
+            }
+            vm -> stack[vm -> stack_size - 2] /= vm -> stack[vm -> stack_size - 1];
             vm -> stack_size -= 1;
             break;
 
@@ -80,11 +109,11 @@ void vm_dump(FILE *stream, const Vm *vm)
     fprintf(stream, "Stack:\n");
     if (vm -> stack_size > 0) {
         for (size_t i = 0; i < vm -> stack_size; i++) {
-            fprintf(stream, "--> %ld\n", vm -> stack[i]);
+            fprintf(stream, " %ld\n", vm -> stack[i]);
         }
     }
     else {
-        fprintf(stream, "--> [Empty]\n");
+        fprintf(stream, "   [Empty]\n");
     }
 }
 
@@ -95,6 +124,10 @@ Instruction program[] = {
     MAKE_INSTRUCTION_PUSH(69),
     MAKE_INSTRUCTION_PUSH(420),
     MAKE_INSTRUCTION_PLUS,
+    MAKE_INSTRUCTION_PUSH(42),
+    MAKE_INSTRUCTION_MINUS,
+    MAKE_INSTRUCTION_PUSH(2),
+    MAKE_INSTRUCTION_MULT,
 };
 
 int main()
@@ -103,6 +136,7 @@ int main()
 
     for (size_t i = 0; i < ARRAY_SIZE(program); ++i) {
         Error error = vm_execute_instruction(&vm, program[i]);
+        vm_dump(stdout, &vm);
 
         if (error != ERROR_OK) {
             fprintf(stderr, "ERROR activated --> %s\n", error_as_cstr(error));
@@ -110,7 +144,6 @@ int main()
             exit(1);
         }
     }
-    vm_dump(stdout, &vm);
 
     return 0;
 }
