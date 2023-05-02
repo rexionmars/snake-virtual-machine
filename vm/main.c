@@ -10,6 +10,7 @@ typedef enum {
     ERROR_STACK_OVERFLOW,
     ERROR_STACK_UNDERFLOW,
     ERROR_ILLEGAL_INSTRUCTION,
+    ERROR_DIVISION_BY_ZERO,
 } Error;
 
 const char *error_as_cstr(Error error)
@@ -23,6 +24,8 @@ const char *error_as_cstr(Error error)
             return "ERROR_STACK_UNDERFLOW";
         case ERROR_ILLEGAL_INSTRUCTION:
             return "ERROR_ILLEGAL_INSTRUCTION";
+        case ERROR_DIVISION_BY_ZERO:
+            return "ERROR_DIVISION_BY_ZERO";
         default:
             assert(0 && "error_as_cstr: Unreachable");
     }
@@ -104,6 +107,11 @@ Error vm_execute_instruction(Vm *vm, Instruction instruction)
             if (vm -> stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
+
+            if (vm -> stack[vm -> stack_size -1] == 0) {
+                return ERROR_DIVISION_BY_ZERO;
+            }
+            
             vm -> stack[vm -> stack_size - 2] /= vm -> stack[vm -> stack_size - 1];
             vm -> stack_size -= 1;
             break;
@@ -152,7 +160,7 @@ int main()
         vm_dump(stdout, &vm);
 
         if (error != ERROR_OK) {
-            fprintf(stderr, "ERROR activated: %s\n", error_as_cstr(error));
+            fprintf(stderr, "TRAP ERROR: %s\n", error_as_cstr(error));
             vm_dump(stderr, &vm);
             exit(1);
         }
