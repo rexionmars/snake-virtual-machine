@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <assert.h>
 
+#define red "\033[0;31m"
+#define off "\033[0m"
+
 #define VM_STACK_CAPACITY 1024
 
 typedef enum {
@@ -127,7 +130,7 @@ void vm_dump(FILE *stream, const Vm *vm)
     fprintf(stream, "Stack:\n");
     if (vm -> stack_size > 0) {
         for (size_t i = 0; i < vm -> stack_size; i++) {
-            fprintf(stream, "   %ld\n", vm -> stack[i]);
+            fprintf(stream, "   %s%ld%s\n", red, vm -> stack[i], off);
         }
     }
     else {
@@ -138,6 +141,8 @@ void vm_dump(FILE *stream, const Vm *vm)
 #define ARRAY_SIZE(xs) (sizeof(xs) / sizeof((xs)[0]))
 
 Vm vm ={0};
+
+// hardcoded program
 Instruction program[] = {
     MAKE_INSTRUCTION_PUSH(69),
     MAKE_INSTRUCTION_PUSH(420),
