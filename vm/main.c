@@ -39,6 +39,8 @@ typedef int64_t Word;
 typedef struct {
     Word stack[VM_STACK_CAPACITY];
     size_t stack_size;
+    Word ip;
+    int halt;
 } Vm;
 
 typedef enum {
@@ -47,6 +49,8 @@ typedef enum {
     INSTRUCTION_MINUS,
     INSTRUCTION_MULT,
     INSTRUCTION_DIV,
+    INSTRUCTION_JUMP,
+    INSTRUCTION_HALT,
 } Instruction_type;
 
 typedef struct {
@@ -71,6 +75,7 @@ const char *instruction_type_as_cstr(Instruction_type type)
 #define MAKE_INSTRUCTION_MINUS  {.type = INSTRUCTION_MINUS}
 #define MAKE_INSTRUCTION_MULT  {.type = INSTRUCTION_MULT}
 #define MAKE_INSTRUCTION_DIV  {.type = INSTRUCTION_DIV}
+#define MAKE_INSTRUCTION_JUMP(addr) {.type = INSTRUCTION_JUMP, .operand = (addr)}
 
 Error vm_execute_instruction(Vm *vm, Instruction instruction)
 {
@@ -151,7 +156,7 @@ Instruction program[] = {
     MAKE_INSTRUCTION_MINUS,
     MAKE_INSTRUCTION_PUSH(2),
     MAKE_INSTRUCTION_MULT,
-    MAKE_INSTRUCTION_PUSH(0),
+    MAKE_INSTRUCTION_PUSH(4),
     MAKE_INSTRUCTION_DIV,
 };
 
@@ -159,14 +164,13 @@ int main()
 {
     vm_dump(stdout, &vm);
 
-    for (size_t i = 0; i < ARRAY_SIZE(program); ++i) {
-        printf("[%s]\n", instruction_type_as_cstr(program[i].type));
-        Error error = vm_execute_instruction(&vm, program[i]);
+    while (!vm.halt) {
+        printf("[%s]\n", instruction_type_as_cstr(program[vm.ip].type));
+        Error error = vm_execute_instruction(&vm, program[vm.ip]);
         vm_dump(stdout, &vm);
 
         if (error != ERROR_OK) {
             fprintf(stderr, "TRAP ERROR: %s\n", error_as_cstr(error));
-            vm_dump(stderr, &vm);
             exit(1);
         }
     }
