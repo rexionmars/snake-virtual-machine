@@ -66,6 +66,8 @@ const char *instruction_type_as_cstr(Instruction_type type)
         case INSTRUCTION_MINUS: return "INSTRUCTION_MINUS";
         case INSTRUCTION_MULT: return "INSTRUCTION_MULT";
         case INSTRUCTION_DIV: return "INSTRUCTION_DIV";
+        case INSTRUCTION_JUMP: return "INSTRUCTION_JUMP";
+        case INSTRUCTION_HALT: return "INSTRUCTION_HALT";
         default: assert(0 && "instruction_type_as_cstr: Unreachable");
     }
 }
@@ -76,52 +78,58 @@ const char *instruction_type_as_cstr(Instruction_type type)
 #define MAKE_INSTRUCTION_MULT  {.type = INSTRUCTION_MULT}
 #define MAKE_INSTRUCTION_DIV  {.type = INSTRUCTION_DIV}
 #define MAKE_INSTRUCTION_JUMP(addr) {.type = INSTRUCTION_JUMP, .operand = (addr)}
+#define MAKE_INSTRUCTION_HALT {.type = INSTRUCTION_HALT, .operand = (addr)}
 
 Error vm_execute_instruction(Vm *vm, Instruction instruction)
 {
     switch (instruction.type) {
         case INSTRUCTION_PUSH:
-            if (vm -> stack_size >= VM_STACK_CAPACITY) {
+            if (vm->stack_size >= VM_STACK_CAPACITY) {
                 return ERROR_STACK_OVERFLOW;
             }
-            vm -> stack[vm -> stack_size++] = instruction.operand;
+            vm->stack[vm->stack_size++] = instruction.operand;
+            vm->ip += 1;
             break;
 
         case INSTRUCTION_PLUS:
-            if (vm -> stack_size < 2) {
+            if (vm->stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
-            vm -> stack[vm -> stack_size - 2] += vm -> stack[vm -> stack_size - 1];
-            vm -> stack_size -= 1;
+            vm->stack[vm->stack_size - 2] += vm->stack[vm->stack_size - 1];
+            vm->stack_size -= 1;
+            vm->ip += 1;
             break;
 
         case INSTRUCTION_MINUS:
-            if (vm -> stack_size < 2) {
+            if (vm->stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
-            vm -> stack[vm -> stack_size - 2] -= vm -> stack[vm -> stack_size - 1];
-            vm -> stack_size -= 1;
+            vm->stack[vm->stack_size - 2] -= vm->stack[vm->stack_size - 1];
+            vm->stack_size -= 1;
+            vm->ip += 1;
             break;
 
         case INSTRUCTION_MULT:
-            if (vm -> stack_size < 2) {
+            if (vm->stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
-            vm -> stack[vm -> stack_size - 2] *= vm -> stack[vm -> stack_size - 1];
-            vm -> stack_size -= 1;
+            vm->stack[vm->stack_size - 2] *= vm->stack[vm->stack_size - 1];
+            vm->stack_size -= 1;
+            vm->ip += 1;
             break;
 
         case INSTRUCTION_DIV:
-            if (vm -> stack_size < 2) {
+            if (vm->stack_size < 2) {
                 return ERROR_STACK_UNDERFLOW;
             }
 
-            if (vm -> stack[vm -> stack_size -1] == 0) {
+            if (vm->stack[vm -> stack_size -1] == 0) {
                 return ERROR_DIVISION_BY_ZERO;
             }
-            
-            vm -> stack[vm -> stack_size - 2] /= vm -> stack[vm -> stack_size - 1];
-            vm -> stack_size -= 1;
+
+            vm->stack[vm -> stack_size - 2] /= vm->stack[vm->stack_size - 1];
+            vm->stack_size -= 1;
+            vm->ip += 1;
             break;
 
         default:
@@ -133,9 +141,9 @@ Error vm_execute_instruction(Vm *vm, Instruction instruction)
 void vm_dump(FILE *stream, const Vm *vm)
 {
     fprintf(stream, "Stack:\n");
-    if (vm -> stack_size > 0) {
-        for (size_t i = 0; i < vm -> stack_size; i++) {
-            fprintf(stream, "   %s%ld%s\n", red, vm -> stack[i], off);
+    if (vm->stack_size > 0) {
+        for (size_t i = 0; i < vm->stack_size; i++) {
+            fprintf(stream, "   %s%ld%s\n", red, vm->stack[i], off);
         }
     }
     else {
